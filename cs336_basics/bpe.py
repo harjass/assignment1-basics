@@ -2,6 +2,8 @@ import os
 import multiprocessing as mp
 import regex as re
 from typing import BinaryIO
+from collections import Counter
+from pprint import pprint
 
 PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 special_token = "<|endoftext|>"
@@ -39,9 +41,15 @@ def find_chunk_boundaries(
 
     return sorted(set(chunk_boundaries))
 
-def process_chunk(chunk: str, special_token: str) -> list[list[str]]:
-    segments = chunk.split(special_token)
-    return [PAT.findall(seg) for seg in segments if seg.strip()]
+def iter_tokens(text: str):
+    for match in PAT.finditer(text):
+        yield match.group()
+
+def process_chunk(chunk: str, special_token: str):
+    counts = Counter()
+    for line in chunk.split(special_token):
+        counts.update(iter_tokens(line))
+    return counts
 
 def multi_chunk(args):
     filepath, start, end, special_token = args
@@ -61,7 +69,10 @@ if __name__ == "__main__":
     tasks = [(filepath, start, end, special_token) for start, end in zip(boundaries[:-1], boundaries[1:])]
 
     with mp.Pool(processes=num_processes) as pool:
-        results = pool.map(multi_chunk, tasks)
+        chunk_counter = pool.map(multi_chunk, tasks)
 
-    # Example: print tokens from the second segment of the second chunk
-    print(results[1])
+    total = Counter()
+    for c in chunk_counter:
+        total.update(c)
+        
+    pprint(total.most_common(10))
