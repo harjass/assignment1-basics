@@ -76,3 +76,4 @@ if __name__ == "__main__":
         total.update(c)
         
     pprint(total.most_common(10))
+    pprint(total.most_common(1)[0])
