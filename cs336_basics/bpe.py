@@ -46,10 +46,15 @@ def iter_tokens(text: str):
         yield match.group()
 
 def process_chunk(chunk: str, special_token: str):
-    counts = Counter()
-    for line in chunk.split(special_token):
-        counts.update(iter_tokens(line))
-    return counts
+    pair_counts = Counter()
+    # 1. pre-tokenise each story
+    stories = chunk.split(special_token)
+    for story in stories:
+        tokens = list(iter_tokens(story))   # materialise generator
+        # 2. count adjacent TOKEN pairs inside this story
+        for left, right in zip(tokens, tokens[1:]):
+            pair_counts[(left, right)] += 1
+    return pair_counts
 
 def multi_chunk(args):
     filepath, start, end, special_token = args
